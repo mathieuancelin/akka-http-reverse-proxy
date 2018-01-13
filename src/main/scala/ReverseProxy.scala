@@ -1,5 +1,3 @@
-import java.net.URI
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri, ContentTypes, HttpEntity, HttpHeader, ContentType, HttpProtocols}
@@ -16,18 +14,9 @@ import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger, AtomicLong}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
-case class Target(scheme: String, host: String, port: Int)
+import models._
 
-object Target {
-  def apply(url: String): Target = {
-    val scheme = url.split("://")(0)
-    val host = url.split("://")(1).split(":")(0)
-    val port = url.split("://")(1).split(":")(1).toInt
-    Target(scheme, host, port)
-  }
-} 
-
-object ReverseProxy {
+class ReverseProxy {
 
   implicit val system = ActorSystem()
   implicit val executor = system.dispatcher
@@ -96,7 +85,7 @@ object ReverseProxy {
     }        
   }
 
-  def main(args: Array[String]) {
-    http.bindAndHandleAsync(handler, "0.0.0.0", 8080)
+  def start(host: String, port: Int) {
+    http.bindAndHandleAsync(handler, host, port)
   }
 }

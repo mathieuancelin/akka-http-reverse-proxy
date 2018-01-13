@@ -19,9 +19,9 @@ libraryDependencies ++= {
 sources in (Compile, doc) := Seq.empty
 publishArtifact in (Compile, packageDoc) := false
 
-mainClass in Compile := Some("ReverseProxy")
-mainClass in reStart := Some("ReverseProxy")
-mainClass in assembly := Some("ReverseProxy")
+mainClass in Compile := Some("Main")
+mainClass in reStart := Some("Main")
+mainClass in assembly := Some("Main")
 
-assemblyJarName in assembly := "reverse-proxy.jar"
+assemblyJarName in assembly := "reverseproxy.jar"
 test in assembly := {}
