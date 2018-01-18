@@ -1,20 +1,17 @@
+import java.util.concurrent.atomic.AtomicInteger
+
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri, ContentTypes, HttpEntity, HttpHeader, ContentType, HttpProtocols}
-import akka.http.scaladsl.model.headers.{`Raw-Request-URI`, `Remote-Address`, `Content-Type`, Host}
 import akka.http.scaladsl.model.Uri.Authority
-import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.{RequestContext, RouteResult}
+import akka.http.scaladsl.model.headers.{Host, `Content-Type`, `Raw-Request-URI`}
+import akka.http.scaladsl.model._
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import com.typesafe.config.ConfigFactory
-import play.api.libs.json.Json
-
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger, AtomicLong}
-
-import scala.concurrent.{ExecutionContextExecutor, Future}
-
+import io.circe._
 import models._
+
+import scala.concurrent.Future
 
 class ReverseProxy {
 
@@ -79,7 +76,7 @@ class ReverseProxy {
       case None => Future.successful {
         HttpResponse(
           404,
-          entity = HttpEntity(ContentTypes.`application/json`, Json.stringify(Json.obj("error" -> "Not found")))
+          entity = HttpEntity(ContentTypes.`application/json`, Json.obj("error" -> Json.fromString("Not found")).noSpaces)
         )
       }
     }        

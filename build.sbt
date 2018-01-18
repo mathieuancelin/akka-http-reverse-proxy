@@ -12,7 +12,10 @@ libraryDependencies ++= {
     "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
     "com.typesafe.akka"  %% "akka-stream" % akkaVersion,
     "com.typesafe.akka" %% "akka-actor" % akkaVersion,
-    "com.typesafe.play" %% "play-json" % "2.6.7", 
+    // "com.typesafe.play" %% "play-json" % "2.6.7",
+    "io.circe" %% "circe-core" % "0.9.0",
+    "io.circe" %% "circe-generic" % "0.9.0",
+    "io.circe" %% "circe-parser" % "0.9.0"
   )
 }
 
