@@ -1,7 +1,7 @@
 package steps
 
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
@@ -10,14 +10,16 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{Host, RawHeader}
 import akka.pattern.CircuitBreaker
 import akka.stream.ActorMaterializer
+import akka.util.ByteString
 import io.circe._
+import io.circe.parser._
 import models._
-import util.{HttpsSupport, Retry}
+import util.Retry
 
 import scala.concurrent.duration._
 import scala.concurrent.{Future, TimeoutException}
 
-// HTTPS + HTTP/2 support
+// Live changes
 class ReverseProxyV6 {
 
   implicit val system = ActorSystem()
@@ -30,6 +32,11 @@ class ReverseProxyV6 {
   val counter = new AtomicInteger(0)
 
   val circuitBreakers = new ConcurrentHashMap[String, CircuitBreaker]()
+
+  def BadRequest(message: String) = HttpResponse(
+    400,
+    entity = HttpEntity(ContentTypes.`application/json`, Json.obj("error" -> Json.fromString(message)).noSpaces)
+  )
 
   def NotFound(path: String) = HttpResponse(
     404,
@@ -46,13 +53,13 @@ class ReverseProxyV6 {
     entity = HttpEntity(ContentTypes.`application/json`, Json.obj("error" -> Json.fromString(message)).noSpaces)
   )
 
-  val services: Map[String, Seq[Target]] = Map(
+  val servicesRef: AtomicReference[Map[String, Seq[Target]]] = new AtomicReference[Map[String, Seq[Target]]](Map(
     "test.foo.bar" -> Seq(
       Target.weighted("http://127.0.0.1:8081", 1),
       Target.weighted("http://127.0.0.1:8082", 1),
       Target.weighted("http://127.0.0.1:8083", 1)
     )
-  )
+  ))
 
   def extractHost(request: HttpRequest): String = request.uri.toString() match {
     case AbsoluteUri(_, hostPort, _) => hostPort
@@ -61,7 +68,7 @@ class ReverseProxyV6 {
 
   def handler(request: HttpRequest): Future[HttpResponse] = {
     val host = extractHost(request)
-    services.get(host) match {
+    servicesRef.get().get(host) match {
       case Some(rawSeq) => {
         val seq = rawSeq.flatMap(t => (1 to t.weight).map(_ => t))
         Retry.retry(3) {
@@ -96,9 +103,43 @@ class ReverseProxyV6 {
     }
   }
 
-  def start(host: String, port: Int, portHttps: Int = 8443) {
+  def apiHandler(request: HttpRequest): Future[HttpResponse] = {
+    request.entity.dataBytes.runFold(ByteString.empty)(_ ++ _).map(_.utf8String).map { body =>
+      parse(body) match {
+        case Left(e) => BadRequest(e.message)
+        case Right(json) => json.as(Command.decoder) match {
+          case Left(e) => BadRequest(e.message)
+          case Right(Command("ADD", domain, target)) =>
+            servicesRef.getAndUpdate { services =>
+              services.get(domain) match {
+                case Some(seq) => services + (domain -> (seq :+ Target(target)))
+                case None => services + (domain -> Seq(Target(target)))
+              }
+            }
+            HttpResponse(
+              200,
+              entity = HttpEntity(ContentTypes.`application/json`, Json.obj("done" -> Json.fromBoolean(true)).noSpaces)
+            )
+          case Right(Command("REM", domain, target)) =>
+            servicesRef.getAndUpdate { services =>
+              services.get(domain) match {
+                case Some(seq) if seq.size == 1 && seq(0).url == target => services - domain
+                case Some(seq) => services + (domain -> seq.filterNot(_ == Target(target)))
+                case _ => services
+              }
+            }
+            HttpResponse(
+              200,
+              entity = HttpEntity(ContentTypes.`application/json`, Json.obj("done" -> Json.fromBoolean(true)).noSpaces)
+            )
+        }
+      }
+    }
+  }
+
+  def start(host: String, port: Int) {
     http.bindAndHandleAsync(handler, host, port)
-    http.bindAndHandleAsync(handler, host, portHttps, connectionContext = HttpsSupport.context())
+    http.bindAndHandleAsync(apiHandler, host, port + 1)
   }
 }
 

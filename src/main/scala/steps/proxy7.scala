@@ -12,14 +12,14 @@ import akka.pattern.CircuitBreaker
 import akka.stream.ActorMaterializer
 import akka.util.ByteString
 import io.circe._
-import io.circe.parser._
+import io.circe.parser.parse
 import models._
 import util.{HttpsSupport, Retry}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Future, TimeoutException}
 
-// live changes
+// HTTPS + HTTP/2 support
 class ReverseProxyV7 {
 
   implicit val system = ActorSystem()
@@ -33,11 +33,6 @@ class ReverseProxyV7 {
 
   val circuitBreakers = new ConcurrentHashMap[String, CircuitBreaker]()
 
-  def BadRequest(message: String) = HttpResponse(
-    400,
-    entity = HttpEntity(ContentTypes.`application/json`, Json.obj("error" -> Json.fromString(message)).noSpaces)
-  )
-
   def NotFound(path: String) = HttpResponse(
     404,
     entity = HttpEntity(ContentTypes.`application/json`, Json.obj("error" -> Json.fromString(s"$path not found")).noSpaces)
@@ -50,6 +45,11 @@ class ReverseProxyV7 {
 
   def BadGateway(message: String) = HttpResponse(
     502,
+    entity = HttpEntity(ContentTypes.`application/json`, Json.obj("error" -> Json.fromString(message)).noSpaces)
+  )
+
+  def BadRequest(message: String) = HttpResponse(
+    400,
     entity = HttpEntity(ContentTypes.`application/json`, Json.obj("error" -> Json.fromString(message)).noSpaces)
   )
 
@@ -137,9 +137,10 @@ class ReverseProxyV7 {
     }
   }
 
-  def start(host: String, port: Int, portHttps: Int = 8443) {
+  def start(host: String, port: Int) {
     http.bindAndHandleAsync(handler, host, port)
-    http.bindAndHandleAsync(handler, host, portHttps, connectionContext = HttpsSupport.context())
+    http.bindAndHandleAsync(apiHandler, host, port + 1)
+    http.bindAndHandleAsync(handler, host, 8443, connectionContext = HttpsSupport.context())
     http.bindAndHandleAsync(apiHandler, host, 8444, connectionContext = HttpsSupport.context())
   }
 }
