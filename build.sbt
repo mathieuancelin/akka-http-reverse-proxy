@@ -1,4 +1,5 @@
 enablePlugins(JavaAppPackaging)
+enablePlugins(JavaAgent)
 
 name         := """akka-http-reverse-proxy"""
 organization := "io.mancelin"
@@ -12,12 +13,15 @@ libraryDependencies ++= {
     "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
     "com.typesafe.akka"  %% "akka-stream" % akkaVersion,
     "com.typesafe.akka" %% "akka-actor" % akkaVersion,
-    // "com.typesafe.play" %% "play-json" % "2.6.7",
+    "com.typesafe.akka" %% "akka-http2-support" % "10.1.0-RC1",
     "io.circe" %% "circe-core" % "0.9.0",
     "io.circe" %% "circe-generic" % "0.9.0",
-    "io.circe" %% "circe-parser" % "0.9.0"
+    "io.circe" %% "circe-parser" % "0.9.0",
+    "io.circe" %% "circe-optics" % "0.9.0"
   )
 }
+
+javaAgents += "org.mortbay.jetty.alpn" % "jetty-alpn-agent" % "2.0.6" % "runtime"
 
 sources in (Compile, doc) := Seq.empty
 publishArtifact in (Compile, packageDoc) := false

@@ -1,3 +1,7 @@
+package steps
+
+import java.util.concurrent.atomic.AtomicInteger
+
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.Uri.Authority
@@ -9,20 +13,27 @@ import models._
 
 import scala.concurrent.Future
 
-class ReverseProxyV1 {
+// Weighted round robin load balancing
+class ReverseProxyV3 {
 
   implicit val system = ActorSystem()
   implicit val executor = system.dispatcher
   implicit val materializer = ActorMaterializer()
   implicit val http = Http(system)
 
-  val NotFound = HttpResponse(
+  val counter = new AtomicInteger(0)
+
+  def NotFound(path: String) = HttpResponse(
     404,
-    entity = HttpEntity(ContentTypes.`application/json`, Json.obj("error" -> Json.fromString("Not found")).noSpaces)
+    entity = HttpEntity(ContentTypes.`application/json`, Json.obj("error" -> Json.fromString(s"$path not found")).noSpaces)
   )
 
-  val services: Map[String, Target] = Map(
-    "test.foo.bar" -> Target("http://127.0.0.1:8081")
+  val services: Map[String, Seq[Target]] = Map(
+    "test.foo.bar" -> Seq(
+      Target.weighted("http://127.0.0.1:8081", 3),
+      Target.weighted("http://127.0.0.1:8082", 2),
+      Target.weighted("http://127.0.0.1:8083", 1)
+    )
   )
 
   def extractHost(request: HttpRequest): String = request.header[Host].map(_.host.address()).getOrElse("--")
@@ -30,12 +41,15 @@ class ReverseProxyV1 {
   def handler(request: HttpRequest): Future[HttpResponse] = {
     val host = extractHost(request)
     services.get(host) match {
-      case Some(target) => {
-        val headersIn: Seq[HttpHeader] = 
-          request.headers.filterNot(t => t.name() == "Host") :+ 
-          Host(target.host) :+ 
-          RawHeader("X-Fowarded-Host", host) :+
-          RawHeader("X-Fowarded-Scheme", request.uri.scheme)
+      case Some(rawSeq) => {
+        val seq = rawSeq.flatMap(t => (1 to t.weight).map(_ => t))
+        val index = counter.incrementAndGet() % (if (seq.nonEmpty) seq.size else 1)
+        val target = seq.apply(index)
+        val headersIn: Seq[HttpHeader] =
+          request.headers.filterNot(t => t.name() == "Host") :+
+            Host(target.host) :+
+            RawHeader("X-Fowarded-Host", host) :+
+            RawHeader("X-Fowarded-Scheme", request.uri.scheme)
         val proxyRequest = request.copy(
           uri = request.uri.copy(
             scheme = target.scheme,
@@ -45,8 +59,8 @@ class ReverseProxyV1 {
         )
         http.singleRequest(proxyRequest)
       }
-      case None => Future.successful(NotFound)
-    }        
+      case None => Future.successful(NotFound(host))
+    }
   }
 
   def start(host: String, port: Int) {
