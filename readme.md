@@ -1,13 +1,13 @@
 # Code your own http reverse-proxy with akka-http in 45 minutes. Challenge accepted !
 
-* version 0: basic reverse proxy
-* version 1: change Host header. Add forwarded headers
-* version 2: round robin load balancing
-* version 3: weighted round robin load balancing
-* version 4: circuit breaker on network errors
-* version 5: retry calls on network errors
-* version 6: http/2 support
-* version 7: runtime changes from admin api
+* [version 0: basic reverse proxy](https://github.com/mathieuancelin/akka-http-reverse-proxy/blob/master/src/main/scala/steps/proxy0.scala)
+* [version 1: change Host header. Add forwarded headers](https://github.com/mathieuancelin/akka-http-reverse-proxy/blob/master/src/main/scala/steps/proxy1.scala)
+* [version 2: round robin load balancing](https://github.com/mathieuancelin/akka-http-reverse-proxy/blob/master/src/main/scala/steps/proxy2.scala)
+* [version 3: weighted round robin load balancing](https://github.com/mathieuancelin/akka-http-reverse-proxy/blob/master/src/main/scala/steps/proxy3.scala)
+* [version 4: circuit breaker on network errors](https://github.com/mathieuancelin/akka-http-reverse-proxy/blob/master/src/main/scala/steps/proxy4.scala)
+* [version 5: retry calls on network errors](https://github.com/mathieuancelin/akka-http-reverse-proxy/blob/master/src/main/scala/steps/proxy5.scala)
+* [version 6: runtime changes from admin api](https://github.com/mathieuancelin/akka-http-reverse-proxy/blob/master/src/main/scala/steps/proxy6.scala)
+* [version 7: http/2 support](https://github.com/mathieuancelin/akka-http-reverse-proxy/blob/master/src/main/scala/steps/proxy7.scala)
 
 ## Helpers
 
