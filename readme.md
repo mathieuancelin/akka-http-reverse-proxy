@@ -7,7 +7,7 @@
 * version 4: circuit breaker on network errors
 * version 5: retry calls on network errors
 * version 6: http/2 support
-* version 7: runtime changes from ???
+* version 7: runtime changes from admin api
 
 ## Helpers
 
@@ -16,5 +16,10 @@ for http2
 ```sh
 sbt run
 curl2 -k -H 'Host: test.foo.bar' https://127.0.0.1:8443 --include
+curl2 -k --http2-H 'Host: test.foo.bar' https://127.0.0.1:8443 --include
 curl2 -k -v -H 'Host: test.foo.bar' https://127.0.0.1:8443 --include
+```
+
+```sh
+wrk -t2 -c200 -d60s -H "Host: test.foo.bar" --latency http://127.0.0.1:8080/
 ```
