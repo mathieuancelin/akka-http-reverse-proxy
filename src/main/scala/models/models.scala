@@ -10,10 +10,10 @@ case class Target(scheme: String, host: String, port: Int, weight: Int = 1, prot
 
 object Target {
   def apply(url: String): Target = {
-    val scheme = url.split("://")(0)
-    val host = url.split("://")(1).split(":")(0)
-    val port = url.split("://")(1).split(":")(1).toInt
-    Target(scheme, host, port)
+    url.split("://|:").toList match {
+      case scheme :: host :: port :: Nil => Target(scheme, host, port.toInt)
+      case _ => throw new RuntimeException(s"Bad target: $url")
+    }
   }
 
   def weighted(url: String, weight: Int): Target = {
