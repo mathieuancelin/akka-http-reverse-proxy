@@ -14,7 +14,9 @@
 for http2
 
 ```sh
-sbt run
+sbt 
+~reStart --- -javaagent:/Users/mathieuancelin/.ivy2/cache/org.mortbay.jetty.alpn/jetty-alpn-agent/jars/jetty-alpn-agent-2.0.6.jar
+
 curl2 -k -H 'Host: test.foo.bar' https://127.0.0.1:8443 --include
 curl2 -k --http2-H 'Host: test.foo.bar' https://127.0.0.1:8443 --include
 curl2 -k -v -H 'Host: test.foo.bar' https://127.0.0.1:8443 --include
